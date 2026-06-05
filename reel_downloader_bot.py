@@ -425,6 +425,7 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 class _Health(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
         self.end_headers()
         self.wfile.write(b'OK')
     def log_message(self, *args):
