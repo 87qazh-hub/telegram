@@ -6,6 +6,7 @@ import shutil
 import sqlite3
 import tempfile
 import threading
+import uuid
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
@@ -130,6 +131,9 @@ MAIN_MENU = ReplyKeyboardMarkup(
 
 MENU_ACTIONS = {"📥 Download Video", "🎵 Download Audio", "📊 My Stats", "📜 My History", "ℹ️ Help"}
 
+# Short ID → URL cache (avoids Telegram's 64-byte callback_data limit)
+_url_cache: dict[str, str] = {}
+
 # ── Quality options ───────────────────────────────────────────────────────────
 
 QUALITY = {
@@ -141,8 +145,10 @@ QUALITY = {
 }
 
 def quality_keyboard(url):
+    uid = str(uuid.uuid4())[:8]
+    _url_cache[uid] = url
     buttons = [
-        InlineKeyboardButton(label, callback_data=f"dl:{key}:{url}")
+        InlineKeyboardButton(label, callback_data=f"dl:{key}:{uid}")
         for key, (label, _) in QUALITY.items()
     ]
     return InlineKeyboardMarkup([buttons[:3], buttons[3:]])
@@ -367,7 +373,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    _, quality_key, url = query.data.split(':', 2)
+    _, quality_key, uid = query.data.split(':', 2)
+    url = _url_cache.get(uid)
+    if not url:
+        await query.message.reply_text("❌ Session expired. Please send the link again.")
+        return
     label = QUALITY[quality_key][0]
     try:
         if query.message.caption is not None:
@@ -388,7 +398,7 @@ async def inline_query_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         info = await asyncio.get_event_loop().run_in_executor(None, fetch_info, query_text)
         title = info.get('title', 'Video')[:50]
         thumbnail = info.get('thumbnail')
-        kwargs = {'thumb_url': thumbnail} if thumbnail else {}
+        kwargs = {'thumbnail_url': thumbnail} if thumbnail else {}
         result = InlineQueryResultArticle(
             id='1',
             title=f"📥 {title}",
