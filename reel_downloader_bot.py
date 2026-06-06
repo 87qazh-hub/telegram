@@ -137,10 +137,10 @@ _url_cache: dict[str, str] = {}
 # ── Quality options ───────────────────────────────────────────────────────────
 
 QUALITY = {
-    'best':  ('Best',  'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'),
-    '720p':  ('720p',  'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]'),
-    '480p':  ('480p',  'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]'),
-    '360p':  ('360p',  'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360]'),
+    'best':  ('Best',  'best[vcodec!=none][acodec!=none]/best'),
+    '720p':  ('720p',  'best[height<=720][vcodec!=none][acodec!=none]/best[height<=720]'),
+    '480p':  ('480p',  'best[height<=480][vcodec!=none][acodec!=none]/best[height<=480]'),
+    '360p':  ('360p',  'best[height<=360][vcodec!=none][acodec!=none]/best[height<=360]'),
     'audio': ('Audio', 'bestaudio[ext=m4a]/bestaudio/best'),
 }
 
@@ -155,23 +155,31 @@ def quality_keyboard(url):
 
 # ── Download helpers ──────────────────────────────────────────────────────────
 
+COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
+
+def _base_opts():
+    opts = {'quiet': True, 'no_warnings': True}
+    if os.path.exists(COOKIES_FILE):
+        opts['cookiefile'] = COOKIES_FILE
+    return opts
+
 def fetch_info(url):
-    with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True, 'skip_download': True}) as ydl:
+    opts = _base_opts()
+    opts['skip_download'] = True
+    with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=False)
         return info['entries'][0] if 'entries' in info else info
 
 def download_media(url, fmt, is_audio):
     tmp_dir = tempfile.mkdtemp()
-    opts = {
+    opts = _base_opts()
+    opts.update({
         'outtmpl': os.path.join(tmp_dir, '%(title)s.%(ext)s'),
-        'quiet': True,
-        'no_warnings': True,
         'noplaylist': True,
-    }
+    })
     if is_audio:
         opts['format'] = 'bestaudio[ext=m4a]/bestaudio/best'
     else:
-        # Prefer no-watermark format for TikTok, fall back to normal
         opts['format'] = ('download_addr-0/' + fmt) if 'tiktok.com' in url else fmt
         opts['merge_output_format'] = 'mp4'
 
