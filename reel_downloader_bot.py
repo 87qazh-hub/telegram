@@ -37,6 +37,13 @@ static_ffmpeg.add_paths()
 
 load_dotenv()
 
+import base64
+_cookies_b64 = os.getenv('INSTAGRAM_COOKIES_B64')
+if _cookies_b64:
+    _cookies_path = os.path.join(os.path.dirname(__file__) or '.', 'cookies.txt')
+    with open(_cookies_path, 'wb') as _f:
+        _f.write(base64.b64decode(_cookies_b64))
+
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
