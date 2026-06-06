@@ -73,6 +73,23 @@ def init_db():
                 downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS url_cache (
+                uid        TEXT PRIMARY KEY,
+                url        TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+def cache_url(uid, url):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute('INSERT OR REPLACE INTO url_cache (uid, url) VALUES (?, ?)', (uid, url))
+        conn.execute("DELETE FROM url_cache WHERE created_at < datetime('now', '-1 day')")
+
+def get_cached_url(uid):
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute('SELECT url FROM url_cache WHERE uid=?', (uid,)).fetchone()
+        return row[0] if row else None
 
 def record_download(user_id, username, url, title, fmt, file_size):
     with sqlite3.connect(DB_PATH) as conn:
@@ -141,8 +158,6 @@ MAIN_MENU = ReplyKeyboardMarkup(
 
 MENU_ACTIONS = {"📥 Download Video", "🎵 Download Audio", "📊 My Stats", "📜 My History", "ℹ️ Help"}
 
-# Short ID → URL cache (avoids Telegram's 64-byte callback_data limit)
-_url_cache: dict[str, str] = {}
 
 # ── Quality options ───────────────────────────────────────────────────────────
 
@@ -156,7 +171,7 @@ QUALITY = {
 
 def quality_keyboard(url):
     uid = str(uuid.uuid4())[:8]
-    _url_cache[uid] = url
+    cache_url(uid, url)
     buttons = [
         InlineKeyboardButton(label, callback_data=f"dl:{key}:{uid}")
         for key, (label, _) in QUALITY.items()
@@ -390,7 +405,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     _, quality_key, uid = query.data.split(':', 2)
-    url = _url_cache.get(uid)
+    url = get_cached_url(uid)
     if not url:
         await query.message.reply_text("❌ Session expired. Please send the link again.")
         return
