@@ -31,6 +31,9 @@ from telegram.ext import (
     filters,
 )
 import yt_dlp
+import static_ffmpeg
+
+static_ffmpeg.add_paths()
 
 load_dotenv()
 
@@ -137,10 +140,10 @@ _url_cache: dict[str, str] = {}
 # ── Quality options ───────────────────────────────────────────────────────────
 
 QUALITY = {
-    'best':  ('Best',  'best[vcodec!=none][acodec!=none]/best'),
-    '720p':  ('720p',  'best[height<=720][vcodec!=none][acodec!=none]/best[height<=720]'),
-    '480p':  ('480p',  'best[height<=480][vcodec!=none][acodec!=none]/best[height<=480]'),
-    '360p':  ('360p',  'best[height<=360][vcodec!=none][acodec!=none]/best[height<=360]'),
+    'best':  ('Best',  'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'),
+    '720p':  ('720p',  'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best[height<=720]'),
+    '480p':  ('480p',  'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best[height<=480]'),
+    '360p':  ('360p',  'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]/best[height<=360]'),
     'audio': ('Audio', 'bestaudio[ext=m4a]/bestaudio/best'),
 }
 
