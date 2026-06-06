@@ -179,12 +179,12 @@ def download_media(url, fmt, is_audio):
     opts.update({
         'outtmpl': os.path.join(tmp_dir, '%(title)s.%(ext)s'),
         'noplaylist': True,
+        'merge_output_format': 'mp4',
     })
     if is_audio:
         opts['format'] = 'bestaudio[ext=m4a]/bestaudio/best'
-    else:
-        opts['format'] = ('download_addr-0/' + fmt) if 'tiktok.com' in url else fmt
-        opts['merge_output_format'] = 'mp4'
+    elif 'tiktok.com' in url:
+        opts['format'] = 'download_addr-0/' + fmt
 
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
