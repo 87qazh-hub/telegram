@@ -218,9 +218,7 @@ async def send_media(user, reply_target, url, quality_key='best'):
         record_download(user.id, user.username, url, title, quality_key, file_size)
     except Exception as e:
         logger.error(f"send_media error: {e}")
-        await reply_target.reply_text(
-            "❌ Failed to download. The content may be private, restricted, or the URL is invalid."
-        )
+        await reply_target.reply_text(f"❌ Error: {e}")
     finally:
         if tmp_dir:
             shutil.rmtree(tmp_dir, ignore_errors=True)
