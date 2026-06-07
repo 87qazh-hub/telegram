@@ -202,11 +202,16 @@ def download_media(url, fmt, is_audio):
         'outtmpl': os.path.join(tmp_dir, '%(title)s.%(ext)s'),
         'noplaylist': True,
         'merge_output_format': 'mp4',
+        'postprocessors': [{'key': 'FFmpegVideoConvertor', 'preferedformat': 'mp4'}],
     })
     if is_audio:
         opts['format'] = 'bestaudio[ext=m4a]/bestaudio/best'
+        opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'm4a'}]
     elif 'tiktok.com' in url:
         opts['format'] = 'download_addr-0/' + fmt
+    else:
+        # Prefer H.264 (avc1) for maximum Telegram compatibility
+        opts['format'] = 'bestvideo[vcodec^=avc1]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+bestaudio/bestvideo+bestaudio/best'
 
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
