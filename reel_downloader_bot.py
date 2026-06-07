@@ -202,15 +202,13 @@ def download_media(url, fmt, is_audio):
         'outtmpl': os.path.join(tmp_dir, '%(title)s.%(ext)s'),
         'noplaylist': True,
         'merge_output_format': 'mp4',
-        'postprocessors': [{'key': 'FFmpegVideoConvertor', 'preferedformat': 'mp4'}],
     })
     if is_audio:
         opts['format'] = 'bestaudio[ext=m4a]/bestaudio/best'
-        opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'm4a'}]
     elif 'tiktok.com' in url:
         opts['format'] = 'download_addr-0/' + fmt
     else:
-        # Prefer H.264 (avc1) for maximum Telegram compatibility
+        # Prefer H.264 so Telegram can play it; remux into mp4 (no re-encoding)
         opts['format'] = 'bestvideo[vcodec^=avc1]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+bestaudio/bestvideo+bestaudio/best'
 
     try:
@@ -471,7 +469,13 @@ class _Health(BaseHTTPRequestHandler):
 
 async def run_bot():
     init_db()
-    app = Application.builder().token(BOT_TOKEN).build()
+    from telegram.request import HTTPXRequest
+    app = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .request(HTTPXRequest(read_timeout=120, write_timeout=120, connect_timeout=30))
+        .build()
+    )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
